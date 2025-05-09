@@ -22,32 +22,8 @@ app.layout = html.Div([
             "data": [{"x": [1, 2, 3], "y": [4, 1, 2], "type": "bar"}],
             "layout": {"title": "Dummy Data"}
         }
-    ), 
-    html.Div(id="data-output"),
-    html.Hr(),
-    html.H2("Upload CSV"),
-    dcc.Upload(
-        id='upload-data',
-        children=html.Button('Upload CSV'),
-        multiple=False
-    ),
-    html.Div(id='upload-status')
+    )
 ])
-
-@app.callback(
-    dash.dependencies.Output('upload-status', 'children'),
-    [dash.dependencies.Input('upload-data', 'contents')],
-    [dash.dependencies.State('upload-data', 'filename')]
-)
-def handle_file_upload(contents, filename):
-    if contents is not None and filename.endswith('.csv'):
-        # Process the CSV file
-        process_csv(filename)
-        # Process the uploaded CSV file
-        return f"File {filename} uploaded successfully."
-    elif contents is not None:
-        return "Invalid file type. Please upload a CSV file."
-    return ""
 
 if __name__ == "__main__":
     app.run(debug=True)

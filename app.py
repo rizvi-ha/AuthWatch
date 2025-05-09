@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from supabase_client import supabase
 import pandas as pd
 import base64
+from csv_helper import process_csv
 
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
@@ -12,21 +13,6 @@ app = dash.Dash(__name__, server=server)
 def fetch_data():
     response = supabase.table("logins").select("*").execute()
     return response.data
-
-# Sample Supabase insert (rn theres no actual tables so this is just a placeholder)
-def upload_to_supabase(data):
-    # Assuming data is a DataFrame
-    for index, row in data.iterrows():
-        supabase.table("logins").insert(row.to_dict()).execute()
-
-def process_csv(file):
-    df = pd.read_csv(file)
-    print(f"Read CSV file: {file}")
-    print(df.head())  # For demonstration, print the first few rows
-    
-    # Upload to Supabase
-    # upload_to_supabase(df)    # Uncomment this line to upload to Supabase
-    return df
 
 app.layout = html.Div([
     html.H1("Security Dashboard"),

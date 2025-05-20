@@ -9,6 +9,11 @@ import dash
 from dash import Dash, html, dcc, callback, Output, Input
 import dash_bootstrap_components as dbc
 import plotly.express as px
+from helper import get_recent_alerts
+
+import alerts_page
+import upload_page
+import settings_page
 
 ###############################################################################
 #  Flask + Dash bootstrap
@@ -71,23 +76,6 @@ def get_kpis(df: pd.DataFrame) -> dict:
         active_sessions=active_sessions,
     )
 
-def get_recent_alerts(limit: int = 5) -> list[dict]:
-    """Return recent alerts as simple dicts (mock)."""
-    # TODO: replace with an actual 'alerts' object grabbed from supabase
-    return [
-        dict(
-            title="Impossible Travel Detected",
-            body="Login from London, UK (2 h after Tokyo login)",
-            icon="bi bi-exclamation-triangle-fill",
-            ts="2 hours ago",
-        ),
-        dict(
-            title="Multiple Failed Login Attempts",
-            body="15 failed attempts from IP 192.168.1.1",
-            icon="bi bi-shield-lock-fill",
-            ts="4 hours ago",
-        ),
-    ][:limit]
 
 ###############################################################################
 # UI components 
@@ -109,16 +97,16 @@ def kpi_card(title: str, value: str, subtitle: str, icon: str) -> dbc.Card:
 sidebar = dbc.Nav(
     [
         dbc.NavLink([html.I(className="bi bi-speedometer2 me-2"), "Dashboard"], href="/", active="exact"),
-        dbc.NavLink([html.I(className="bi bi-bell-fill me-2"), "Alerts"], href="#", disabled=True),
-        dbc.NavLink([html.I(className="bi bi-upload me-2"), "Upload Logs"], href="#", disabled=True),
-        dbc.NavLink([html.I(className="bi bi-gear-fill me-2"), "Settings"], href="#", disabled=True),
+        dbc.NavLink([html.I(className="bi bi-bell-fill me-2"), "Alerts"], href="/alerts", active="exact"),
+        dbc.NavLink([html.I(className="bi bi-upload me-2"), "Upload Logs"], href="/upload", active="exact"),
+        dbc.NavLink([html.I(className="bi bi-gear-fill me-2"), "Settings"], href="/settings", active="exact"),
     ],
     vertical=True,
     pills=True,
     className="mt-4",
 )
 
-def build_content():
+def build_dashboard():
     kpis = get_kpis(RAW_DF)
 
     #  Login volume line chart
@@ -224,7 +212,8 @@ app.layout = dbc.Row(
                     className="shadow-sm mb-3",
                     sticky="top",
                 ),
-                build_content(),
+                dcc.Location(id="url"),
+                html.Div(id="page-content"),
             ],
             width={"size": 10, "offset": 2},
         ),
@@ -233,12 +222,20 @@ app.layout = dbc.Row(
 )
 
 ###############################################################################
-#  Dummy Callback
+#  Callbacks
 ###############################################################################
-@callback(Output("dummy-output", "children"), Input("dummy-output", "id"))
-def _noop(_):
-    #  This is a dummy callback just for now
-    return ""
+
+@callback(Output("page-content", "children"), Input("url", "pathname"))
+def render_page(pathname: str):
+    """Swap centre column based on URL path."""
+    if pathname == "/alerts":
+        return alerts_page.layout()
+    elif pathname == "/upload":
+        return upload_page.layout()
+    elif pathname == "/settings":
+        return settings_page.layout()
+    # default → dashboard
+    return build_dashboard()
 
 ###############################################################################
 #  Run server

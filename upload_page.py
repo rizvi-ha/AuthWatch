@@ -42,8 +42,15 @@ def handle_upload(list_of_contents, list_of_names):
             else:
                 return "Unsupported file type"
             
+            # Clean column names
+            df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
+            
             # Upload to Supabase
-            # upload_to_supabase(df)
+            try:
+                upload_to_supabase(df)
+            except Exception as e:
+                messages.append(f"Failed to upload {name}: {str(e)}")
+                continue
             
             messages.append(f"Uploaded {name} with {len(df)} rows.")
             

@@ -15,6 +15,8 @@ import alerts_page
 import upload_page
 import settings_page
 
+from csv_helper import get_login_logs
+
 ###############################################################################
 #  Flask + Dash bootstrap
 ###############################################################################
@@ -40,22 +42,25 @@ def _random_login_dataframe(days: int = 7, rows: int = 5_000) -> pd.DataFrame:
     rng = np.random.default_rng()
     df = pd.DataFrame(
         {
-            "UID": rng.integers(1, N_USERS, rows),
-            "Login Timestamp": [
+            "uid": rng.integers(1, N_USERS, rows),
+            "timestamp": [
                 (NOW - timedelta(hours=rng.uniform(0, 24 * days))).isoformat()
                 for _ in range(rows)
             ],
-            "IP address": [_random_ip() for _ in range(rows)],
-            "Browser": rng.choice(["Chrome", "Edge", "Firefox", "Safari"], rows),
-            "OS": rng.choice(["Windows", "macOS", "Linux", "Android", "iOS"], rows),
-            "Device": rng.choice(["Desktop", "Laptop", "Mobile", "Tablet"], rows),
-            "Success": rng.choice([True, False], rows, p=[0.97, 0.03]),
+            "ip_address": [_random_ip() for _ in range(rows)],
+            "browser": rng.choice(["Chrome", "Edge", "Firefox", "Safari"], rows),
+            "os": rng.choice(["Windows", "macOS", "Linux", "Android", "iOS"], rows),
+            "device": rng.choice(["Desktop", "Laptop", "Mobile", "Tablet"], rows),
+            "login_result": rng.choice([True, False], rows, p=[0.97, 0.03]),
         }
     )
     return df
 
 #  Fake raw data we’ll visualise
-RAW_DF = _random_login_dataframe()
+# RAW_DF = _random_login_dataframe()
+
+# Use raw data from Supabase
+RAW_DF = get_login_logs()
 
 ###############################################################################
 # Helper functions (plug in real queries later) 
@@ -64,8 +69,8 @@ def get_kpis(df: pd.DataFrame) -> dict:
     """Return the numbers for the four KPI cards."""
 
     # TODO: replace with real queries
-    total_users = df["UID"].nunique()
-    failed = (~df["Success"]).sum()
+    total_users = df["uid"].nunique()
+    failed = (~df["login_result"]).sum()
     suspicious = random.randint(10, 30)  # placeholder rule
     active_sessions = random.randint(1_000, 2_000)  # placeholder
 
@@ -111,7 +116,7 @@ def build_dashboard():
 
     #  Login volume line chart
     volume_df = (
-        RAW_DF.assign(day=lambda d: pd.to_datetime(d["Login Timestamp"]).dt.date)
+        RAW_DF.assign(day=lambda d: pd.to_datetime(d["timestamp"]).dt.date)
         .groupby("day")
         .size()
         .reset_index(name="logins")
@@ -121,7 +126,7 @@ def build_dashboard():
     #  Success rate pie
     success_fig = px.pie(
         RAW_DF,
-        names="Success",
+        names="login_result",
         title="Login Success Rate",
         hole=0.5,
         color_discrete_sequence=px.colors.qualitative.G10,

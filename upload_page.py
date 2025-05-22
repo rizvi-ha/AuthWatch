@@ -2,6 +2,7 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc, callback, Input, Output, State
 import pandas as pd
 import io, base64
+from csv_helper import upload_to_supabase
 
 def layout():
     return dbc.Container(
@@ -20,7 +21,7 @@ def layout():
     )
 
 # Example callback that just counts rows and echoes a message -------------
-# TODO: yucheng replace with ur real code
+# TODO: yucheng replace with ur real code   -> Left Supabase uploaded 
 @callback(
     Output("upload-status", "children"),
     Input("upload-data", "contents"),
@@ -31,12 +32,26 @@ def handle_upload(list_of_contents, list_of_names):
         return ""
     messages = []
     for content, name in zip(list_of_contents, list_of_names):
-        _, b64 = content.split(",")
-        decoded = base64.b64decode(b64)
-        # crude format detection – revise for your needs
-        if name.endswith(".csv"):
-            df = pd.read_csv(io.StringIO(decoded.decode()))
-        else:
-            df = pd.read_json(io.StringIO(decoded.decode()))
-        messages.append(f"✅ {name}: {len(df):,} rows imported")
-    return [html.Div(m) for m in messages]
+        if content is not None:
+            content_type, content_string = content.split(",")
+            decoded = base64.b64decode(content_string)
+            if "csv" in name:
+                df = pd.read_csv(io.StringIO(decoded.decode("utf-8")))
+            elif "json" in name:
+                df = pd.read_json(io.StringIO(decoded.decode("utf-8")))
+            else:
+                return "Unsupported file type"
+            
+            # Clean column names
+            df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
+            
+            # Upload to Supabase
+            try:
+                upload_to_supabase(df)
+            except Exception as e:
+                messages.append(f"Failed to upload {name}: {str(e)}")
+                continue
+            
+            messages.append(f"Uploaded {name} with {len(df)} rows.")
+            
+    return html.Div(messages)
